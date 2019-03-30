@@ -188,6 +188,23 @@ def print_exception(ex):
     else:
         print('ERROR: ' + ex.message)
 
+def get_peripheral(mac_address):
+    try:
+        return Peripheral(mac_address, ADDR_TYPE_RANDOM)
+    except BTLEException as ex:
+        if 'failed to connect' in ex.message.lower():
+            print(
+                'ERROR: Failed to connect to device.',
+                'Try running switchmate with sudo.',
+            )
+        else:
+            print('ERROR: ' + ex.message)
+    except OSError as ex:
+        print(
+            'ERROR: Failed to connect to device.',
+            'Try compiling the bluepy helper.',
+            ex
+        )
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
@@ -217,25 +234,7 @@ if __name__ == '__main__':
         )
         sys.exit()
 
-    try:
-        device = Peripheral(mac_address, ADDR_TYPE_RANDOM)
-    except BTLEException as ex:
-        if 'failed to connect' in ex.message.lower():
-            print(
-                'ERROR: Failed to connect to device.',
-                'Try running switchmate with sudo.',
-            )
-        else:
-            print('ERROR: ' + ex.message)
-        sys.exit(1)
-    except OSError as ex:
-        print(
-            'ERROR: Failed to connect to device.',
-            'Try compiling the bluepy helper.',
-            ex
-        )
-        sys.exit(1)
-
+    device = get_peripheral(mac_address)
     if arguments['debug']:
         try:
             print('Retrieving debug info...')
