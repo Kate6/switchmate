@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from .switchmate import get_peripheral, scan, switch
+from .switchmate import get_peripheral, scan, switch, MANUFACTURER_DATA_AD_TYPE
 import datetime, json
 
 app = Flask(__name__)
@@ -8,7 +8,7 @@ def get_error(*messages):
     return {"status": "error", "msg": "' + '\n'.join(messages) + '"}
 
 @app.route('/iot/switchmate', methods=['GET'])
-def switchmate_scan():
+def switchmate_get():
     switchmates = []
     if request.args.get('timeout'):
         try:
@@ -19,11 +19,14 @@ def switchmate_scan():
             return jsonify(get_error('Timeout must be a integer or float.'))
     else:
         timeout = 1
-        
+
     scan(
         str(datetime.datetime.now()) + ' - Scanning Switchmate...',
         timeout=timeout,
-        process_entry=lambda switchmate: switchmates.append(switchmate.addr),
+        process_entry=lambda switchmate: switchmates.append([
+            switchmate.addr,
+            ("off", "on")[int(switchmate.getValueText(MANUFACTURER_DATA_AD_TYPE)[1])],
+        ]),
     )
 
     return jsonify(switchmates)
