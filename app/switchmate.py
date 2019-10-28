@@ -156,18 +156,23 @@ def get_state_handle(device):
         return BRIGHT_STATE_HANDLE
 
 
-def switch(device, val):
-    state_handle = get_state_handle(device)
-    curr_val = device.readCharacteristic(state_handle)
+def switch(device, val, is_original=None):
+    state_handle = None
+
+    if is_original is not None:
+        state_handle = ORIGINAL_STATE_HANDLE if is_original else BRIGHT_STATE_HANDLE
+    else:
+        state_handle = get_state_handle(device)
+
     if val is None:
+        curr_val = device.readCharacteristic(state_handle)
         val = b'\x01' if curr_val == b'\x00' else b'\x00'
+
+    device.writeCharacteristic(state_handle, val, True)
+
     val_num = get_byte(val[0])
     val_text = ('off', 'on')[val_num]
-    if curr_val != val:
-        device.writeCharacteristic(state_handle, val, True)
-        print('Switched {}!'.format(val_text))
-    else:
-        print('Already {}!'.format(val_text))
+    print('Switched {}!'.format(val_text))
 
 
 def print_entry_state(entry, state_handle=None):

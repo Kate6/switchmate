@@ -5,7 +5,7 @@ import datetime, json
 app = Flask(__name__)
 
 def get_error(*messages):
-    return {"status": "error", "msg": "' + '\n'.join(messages) + '"}
+    return {"status": "error", "msg": '; '.join(messages)}
 
 @app.route('/iot/switchmate', methods=['GET'])
 def switchmate_get():
@@ -35,14 +35,17 @@ def switchmate_get():
 def switchmate_toggle():
     print(str(datetime.datetime.now()) + ' - Toggling Switchmate...')
     req_data = request.get_json()
-    mac_address = req_data['mac_address']
+    mac_address = req_data.get('mac_address')
+    val = b'\x01' if req_data.get('on') else (b'\x00' if req_data.get('off') else None)
+    is_original = req_data.get('is_original')
+    
     if not mac_address:
         return jsonify(get_error('mac_address is required'))
 
     device = get_peripheral(mac_address)
     if device:
         try:
-            switch(device, None)
+            switch(device, val, is_original)
         except Exception as ex:
             print(str(datetime.datetime.now()) + ' - ERROR: ' + ex.message)
             if 'disconnected' in ex.message.lower():
