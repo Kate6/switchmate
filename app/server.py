@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 from .switchmate import get_peripheral, scan, switch, MANUFACTURER_DATA_AD_TYPE
 import datetime, json
 
+MAX_RETRIES = 5
+
 app = Flask(__name__)
 
 def get_error(*messages):
@@ -43,6 +45,15 @@ def switchmate_toggle():
         return jsonify(get_error('mac_address is required'))
 
     device = get_peripheral(mac_address)
+
+    # Retry to search for device
+    if not device:
+        retries = 0
+
+        while not device and retries < MAX_RETRIES:
+            retries += 1
+            device = get_peripheral(mac_address)
+
     if device:
         try:
             switch(device, val, is_original)
@@ -53,6 +64,7 @@ def switchmate_toggle():
             else:
                 return jsonify(get_error(ex.message))
         return jsonify({"status": "done"})
+
     return jsonify(get_error('Device not found.'))
 
 app.run(host='0.0.0.0', port=5000)
