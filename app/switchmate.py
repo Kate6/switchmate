@@ -69,7 +69,6 @@ ORIGINAL_MODEL_STRING_HANDLE = 0x14
 SERVICES_AD_TYPE = 0x07
 MANUFACTURER_DATA_AD_TYPE = 0xff
 
-
 def get_switchmates(scan_entries, mac_address):
     switchmates = []
     for scan_entry in scan_entries:
@@ -155,6 +154,10 @@ def get_state_handle(device):
     else:
         return BRIGHT_STATE_HANDLE
 
+def get_state(device, state_handle=None):
+    if state_handle is None:
+        state_handle = get_state_handle(device)
+    return device.readCharacteristic(state_handle)
 
 def switch(device, val, is_original=None):
     state_handle = None
@@ -176,8 +179,19 @@ def switch(device, val, is_original=None):
 
 
 def print_entry_state(entry, state_handle=None):
-    service_data = entry.getValueText(MANUFACTURER_DATA_AD_TYPE)
-    val = int(service_data[1])
+    #service_data = entry.getValueText(AD_TYPE_SERVICE_DATA)
+    #val = int(service_data[1])
+    tries = 0
+    success = False
+
+    while ( ( tries < 10 ) and ( not success ) ):
+      tries += 1
+      try:
+        val = get_state(Peripheral(entry.addr, ADDR_TYPE_RANDOM))[0];
+        success = True
+      except BTLEException as ex:
+        success = False
+        
     print(entry.addr, ("off", "on")[val])
 
 
@@ -194,22 +208,26 @@ def print_exception(ex):
         print('ERROR: ' + ex.message)
 
 def get_peripheral(mac_address):
-    try:
-        return Peripheral(mac_address, ADDR_TYPE_RANDOM)
-    except BTLEException as ex:
-        if 'failed to connect' in ex.message.lower():
-            print(
-                'ERROR: Failed to connect to device.',
-                'Try running switchmate with sudo.',
-            )
-        else:
-            print('ERROR: ' + ex.message)
-    except OSError as ex:
-        print(
-            'ERROR: Failed to connect to device.',
-            'Try compiling the bluepy helper.',
-            ex
-        )
+    tries = 0
+
+    while ( tries < 10 ):
+      tries += 1
+      try:
+          return Peripheral(mac_address, ADDR_TYPE_RANDOM)
+      except BTLEException as ex:
+          if 'failed to connect' in ex.message.lower():
+              print(
+                  'ERROR: Failed to connect to device.',
+                  'Try running switchmate with sudo.',
+              )
+          else:
+              print('ERROR: ' + ex.message)
+      except OSError as ex:
+          print(
+              'ERROR: Failed to connect to device.',
+              'Try compiling the bluepy helper.',
+              ex
+          )
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
